@@ -1,8 +1,7 @@
 # Simple-Timer-App
-A simple timekeeping app made in ChatGPT, coded in Python.  I hope you'll be able to gauge that I am not a programmer, by any stretch.
+A simple timekeeping app made in ChatGPT, coded in Python.  I hope you'll be able to gauge that I am not a programmer, by any stretch.  This probably needs more features and some rigorous testing for any bug fixes, but feel free to tinker with it as you please and link your edits and additions.  Basic operation can be seen below.
 
 ![image](https://github.com/DeepFri3d/Simple-Timer-App/assets/37976447/49419982-aeef-4e20-b05f-3bb2bab8b838)
-
 
 This app was cooked up to help me take note of the time spent doing tasks for clients and other duties in my day-to-day work life, originally thought up as a timer to gauge how long 
 I spend doing emails without having to expense money on web-based integrations, minimise data being hosted elsewhere (that may read the email contents), or start digging deep into the Microsoft Graph API.  
@@ -16,7 +15,7 @@ The app has some basic stopwatch functions, but allows the input of data to note
 
 Additionally, you can export the entire history of the timekeeping to CSV to chart and graph in a spreadsheet program of your choosing.
 
-This probably needs more features, but feel free to tinker with it as you please and link your edits and additions.  Basic operation can be seen below.
+Basic operation can be seen below.
 
 ![image](https://github.com/DeepFri3d/Simple-Timer-App/assets/37976447/b91f86bd-3cf3-4edc-9893-91eed9193d03)
 
