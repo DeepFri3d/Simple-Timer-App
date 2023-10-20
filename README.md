@@ -1,5 +1,5 @@
 # Simple-Timer-App
-A simple timekeeping app made in ChatGPT, coded in Python.  I hope you'll be able to gauge that I am not a programmer, by any stretch.  This probably needs more features and some rigorous testing for any bug fixes, but feel free to tinker with it as you please and link your edits and additions.  Basic operation can be seen below.
+A simple timekeeping app made in ChatGPT, coded in Python.  I hope you'll be able to gauge that I am not a programmer, by any stretch.  This probably needs more features and some rigorous testing for any bugs, but feel free to tinker with it as you please and link your edits and additions.  Basic operation can be seen below.
 
 ![image](https://github.com/DeepFri3d/Simple-Timer-App/assets/37976447/49419982-aeef-4e20-b05f-3bb2bab8b838)
 
