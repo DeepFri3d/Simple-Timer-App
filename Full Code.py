@@ -1,59 +1,27 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, Scrollbar, messagebox
+from tkinter import ttk, filedialog, Scrollbar, messagebox, Menu
 import time
 import sqlite3
 import csv
 import keyboard
 from datetime import datetime
 import threading
-
-
-class ToolTip:
-    def __init__(self, widget, text):
-        self.widget = widget
-        self.text = text
-        self.tooltip = None
-        self.show_id = None
-        self.hide_id = None
-
-        self.widget.bind("<Enter>", self.schedule_show_tooltip)
-        self.widget.bind("<Leave>", self.hide_tooltip)
-
-    def schedule_show_tooltip(self, event=None):
-        if not self.show_id:
-            self.show_id = self.widget.after(500, self.show_tooltip)
-
-    def show_tooltip(self):
-        x, y, _, _ = self.widget.bbox("insert")
-        x += self.widget.winfo_rootx() + 25
-        y += self.widget.winfo_rooty() + 25
-        self.tooltip = tk.Toplevel(self.widget)
-        self.tooltip.wm_overrideredirect(True)
-        self.tooltip.wm_geometry(f"+{x}+{y}")
-        label = tk.Label(self.tooltip, text=self.text, background="yellow")
-        label.pack()
-
-        # Schedule the hide tooltip after 1 second
-        if not self.hide_id:
-            self.hide_id = self.widget.after(1000, self.hide_tooltip)
-
-    def hide_tooltip(self, event=None):
-        if self.show_id:
-            self.widget.after_cancel(self.show_id)
-            self.show_id = None
-        if self.hide_id:
-            self.widget.after_cancel(self.hide_id)
-            self.hide_id = None
-        if self.tooltip:
-            self.tooltip.destroy()
-            self.tooltip = None
+import os
 
 
 class TimerApp:
     def __init__(self, master):
         self.master = master
         self.master.title("Timer App")
-        self.master.resizable(False, False)  # Disabling window resizing
+        self.master.resizable(False, False)
+
+        # Add menu
+        self.menu = Menu(self.master)
+        self.master.config(menu=self.menu)
+
+        self.file_menu = Menu(self.menu, tearoff=0, font=("Arial", 12))
+        self.menu.add_cascade(label="File", menu=self.file_menu)
+        self.file_menu.add_command(label="Delete Database", command=self.confirm_delete_database)
 
         self.time_elapsed = 0.0
         self.timer_running = False
@@ -62,68 +30,52 @@ class TimerApp:
         self.display_var = tk.StringVar()
         self.display_var.set("0:00:00.0")
         self.display = tk.Label(self.master, textvariable=self.display_var, font=("Arial", 48))
-        self.display.grid(row=0, columnspan=5)
+        self.display.grid(row=0, column=0, columnspan=5, pady=10)
 
         self.create_buttons()
 
-        # Keyboard library hotkey bindings
-        keyboard.add_hotkey('ctrl+shift+s', self.start_timer)
-        keyboard.add_hotkey('ctrl+shift+d', self.stop_timer)
-        keyboard.add_hotkey('ctrl+shift+f', self.reset_timer)
-        keyboard.add_hotkey('ctrl+shift+a', self.save_time)
-        keyboard.add_hotkey('ctrl+shift+c', self.delete_entry)
-        keyboard.add_hotkey('ctrl+shift+v', self.download_csv)
-        keyboard.add_hotkey('ctrl+shift+l', lambda: self.task_desc.focus())  # Focus on the task description entry
-        keyboard.add_hotkey('ctrl+shift+e', self.delete_entry)
-        keyboard.add_hotkey('ctrl+shift+x', self.clear_listbox)
-        keyboard.add_hotkey('ctrl+shift+o', self.show_all_entries)
-
-        self.csv_button = tk.Button(self.master, text="Save CSV", command=self.download_csv, font=("Arial", 20))
-        self.csv_button.grid(row=2, columnspan=5)
-
         self.task_desc = tk.Entry(self.master, font=("Arial", 20))
-        self.task_desc.grid(row=3, columnspan=5)
+        self.task_desc.grid(row=3, column=0, columnspan=5, pady=10)
 
-        # Using Text widget instead of Listbox for wrapping text
-        self.db_textbox = tk.Text(self.master, font=("Arial", 20), height=10, width=50, wrap=tk.WORD, state=tk.DISABLED)
-        self.db_textbox.grid(row=4, columnspan=5)
+        # Adjusting the size of the listbox and adding a y-scrollbar
+        self.db_listbox = tk.Listbox(self.master, font=("Arial", 20), height=10, width=30, selectmode=tk.MULTIPLE)
+        self.db_listbox.grid(row=5, column=0, columnspan=5, pady=10, sticky='ew')
 
-        # Adding scrollbar for the Text widget
-        self.scrollbar = Scrollbar(self.master, command=self.db_textbox.yview)
-        self.scrollbar.grid(row=4, column=5, sticky="nsew")
-        self.db_textbox.config(yscrollcommand=self.scrollbar.set)
+        self.scrollbar = Scrollbar(self.master, command=self.db_listbox.yview, width=12)
+        self.scrollbar.grid(row=5, column=5, sticky="ns", pady=10, padx=(0, 10))
+        self.db_listbox.config(yscrollcommand=self.scrollbar.set)
 
         self.conn = sqlite3.connect("time_data.db")
         self.c = self.conn.cursor()
-        self.c.execute("CREATE TABLE IF NOT EXISTS times (date TEXT, time_elapsed TEXT, task TEXT)")
+        self.c.execute("CREATE TABLE IF NOT EXISTS times (date TEXT, time TEXT, time_elapsed TEXT, task TEXT)")
         self.conn.commit()
 
         self.update_db_listbox()
 
+    def create_buttons(self):
+        self.create_button("Start", self.start_timer, 1, 0, "<Control-Shift-s>")
+        self.create_button("Stop", self.stop_timer, 1, 1, "<Control-Shift-d>")
+        self.create_button("Save Entry", self.save_time, 1, 2, "<Control-Shift-a>")
+        self.create_button("Reset", self.reset_timer, 1, 3, "<Control-Shift-f>")
+        self.create_button("Delete Entry", self.delete_entry, 6, 1, "<Control-Shift-e>")
+        self.create_button("Show Entries", self.show_all_entries, 6, 2, "<Control-Shift-o>")
+        self.create_button("Clear Listbox", self.clear_listbox, 6, 3, "<Control-Shift-x>")
+        self.create_button("Export to CSV", self.download_csv, 6, 4, "<Control-Shift-v>")
+
     def create_button(self, text, command, row, col, key_combination):
         button_frame = tk.Frame(self.master)
-        button_frame.grid(row=row, column=col, sticky='nsew')
+        button_frame.grid(row=row, column=col, sticky='nsew', padx=10, pady=5)
 
         button = tk.Button(button_frame, text=text, command=command, font=("Arial", 20), relief="raised")
-        button.pack(pady=10)
+        button.pack(fill=tk.BOTH, expand=True)
 
         key_label = tk.Label(button_frame, text=key_combination, font=("Arial", 10), fg="gray")
-        key_label.pack()
+        key_label.pack(side=tk.BOTTOM)
 
         button.bind("<ButtonPress-1>", lambda e: button.config(relief="sunken"))
         button.bind("<ButtonRelease-1>", lambda e: button.config(relief="raised"))
 
         return button
-
-    def create_buttons(self):
-        self.create_button("Start", self.start_timer, 1, 0, "<Control-Shift-s>")
-        self.create_button("Stop", self.stop_timer, 1, 1, "<Control-Shift-d>")
-        self.create_button("Save", self.save_time, 1, 2, "<Control-Shift-a>")
-        self.create_button("Reset", self.reset_timer, 1, 3, "<Control-Shift-f>")
-        self.create_button("Clear Entry", self.delete_entry, 1, 4, "<Control-Shift-c>")
-        self.create_button("Delete Entry", self.delete_entry, 6, 0, "<Control-Shift-e>")
-        self.create_button("Show Listbox", self.show_all_entries, 6, 1, "<Control-Shift-o>")
-        self.create_button("Clear Listbox", self.clear_listbox, 6, 2, "<Control-Shift-x>")
 
     def start_timer(self):
         if not self.timer_running:
@@ -146,9 +98,11 @@ class TimerApp:
 
     def save_time(self):
         task = self.task_desc.get()
-        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.c.execute("INSERT INTO times (date, time_elapsed, task) VALUES (?, ?, ?)",
-                       (date, self.display_var.get(), task))
+        current_datetime = datetime.now()
+        date = current_datetime.strftime("%Y-%m-%d")
+        time = current_datetime.strftime("%H:%M:%S")
+        self.c.execute("INSERT INTO times (date, time, time_elapsed, task) VALUES (?, ?, ?, ?)",
+                       (date, time, self.display_var.get(), task))
         self.conn.commit()
         self.update_db_listbox()
 
@@ -158,57 +112,60 @@ class TimerApp:
         self.display_var.set("0:00:00.0")
 
     def clear_listbox(self):
-        self.db_textbox.configure(state=tk.NORMAL)
-        self.db_textbox.delete(1.0, tk.END)
-        self.db_textbox.configure(state=tk.DISABLED)
+        self.db_listbox.delete(0, tk.END)
 
     def show_all_entries(self):
-        self.master.after(0, self._show_all_entries_db)
-
-    def _show_all_entries_db(self):
-        self.db_textbox.configure(state=tk.NORMAL)
-        self.db_textbox.delete(1.0, tk.END)
-
-        self.c.execute("SELECT * FROM times")
-        for row in self.c.fetchall():
-            entry = " | ".join(str(item) for item in row)
-            self.db_textbox.insert(tk.END, entry + "\n")
-        self.db_textbox.configure(state=tk.DISABLED)
+        self.update_db_listbox()
 
     def delete_entry(self):
-        try:
-            selected_text = self.db_textbox.selection_get()
-            if not selected_text:
-                return
-            confirmation = messagebox.askyesno("Delete Entry", "Are you sure you want to delete the selected entry?")
-            if confirmation:
-                selected_data = selected_text.split(" | ")
-                self.c.execute("DELETE FROM times WHERE date=? AND time_elapsed=? AND task=?",
-                               (selected_data[0], selected_data[1], selected_data[2]))
+        selected_indices = self.db_listbox.curselection()
+        for index in selected_indices:
+            entry = self.db_listbox.get(index)
+            entry_data = entry.split(" | ")
+            if len(entry_data) == 4:
+                self.c.execute("DELETE FROM times WHERE date=? AND time=? AND time_elapsed=? AND task=?",
+                               (entry_data[0], entry_data[1], entry_data[2], entry_data[3]))
                 self.conn.commit()
-                self.update_db_listbox()
-        except tk.TclError:
-            messagebox.showwarning("No Entry Selected", "Please select an entry to delete.")
+            else:
+                print(f"Unexpected data format for entry: {entry}")
+
+        self.update_db_listbox()
+
+    def confirm_delete_database(self):
+        response = messagebox.askyesno("Confirm Deletion", "Are you sure you want to delete the entire database?")
+        if response:
+            self.delete_database_file()
+
+    def delete_database_file(self):
+        # Close the SQLite connection
+        self.conn.close()
+        if os.path.exists("time_data.db"):
+            os.remove("time_data.db")
+            messagebox.showinfo("Database Deleted", "The database file has been deleted successfully.")
+
+            # Reconnect to the database after deletion
+            self.conn = sqlite3.connect("time_data.db")
+            self.c = self.conn.cursor()
+            self.c.execute("CREATE TABLE IF NOT EXISTS times (date TEXT, time TEXT, time_elapsed TEXT, task TEXT)")
+        else:
+            messagebox.showwarning("File Not Found", "The database file does not exist.")
 
     def download_csv(self):
         filepath = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
         if filepath:
             with open(filepath, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(["Date", "Time Elapsed", "Task"])
+                writer.writerow(["Date", "Time", "Time Elapsed", "Task"])
                 self.c.execute("SELECT * FROM times")
                 for row in self.c.fetchall():
                     writer.writerow(row)
 
     def update_db_listbox(self):
-        today = datetime.now().strftime("%Y-%m-%d")
-        self.db_textbox.configure(state=tk.NORMAL)
-        self.db_textbox.delete(1.0, tk.END)
-        self.c.execute("SELECT * FROM times WHERE date LIKE ?", (f"{today}%",))
+        self.db_listbox.delete(0, tk.END)
+        self.c.execute("SELECT * FROM times")
         for row in self.c.fetchall():
             entry = " | ".join(str(item) for item in row)
-            self.db_textbox.insert(tk.END, entry + "\n")
-        self.db_textbox.configure(state=tk.DISABLED)
+            self.db_listbox.insert(tk.END, entry)
 
 
 if __name__ == "__main__":
