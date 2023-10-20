@@ -1,6 +1,9 @@
 # Simple-Timer-App
 A simple timekeeping app made in ChatGPT, coded in Python.  I hope you'll be able to gauge that I am not a programmer, by any stretch.  This probably needs more features and some rigorous testing for any bugs, but feel free to tinker with it as you please and link your edits and additions.  Basic operation can be seen below.
 
+KNOWN BUG: pressing more than one entry will leave both/all selected for deletion.  Reclicking the last entry clicked will remove THAT particular one from the selection.  I'll get it resolved at some point.
+KNOWN BUG: Identical entries will be deleted at once.  This is an extremely unlikely scenario, but making users aware.
+
 ![image](https://github.com/DeepFri3d/Simple-Timer-App/assets/37976447/49419982-aeef-4e20-b05f-3bb2bab8b838)
 
 This app was cooked up to help me take note of the time spent doing tasks for clients and other duties in my day-to-day work life, originally thought up as a timer to gauge how long 
